@@ -7,6 +7,9 @@ import (
 	"os"
 	"strconv"
 	"encoding/csv"
+	"net/smtp"
+	"github.com/joho/godotenv"
+    "strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -24,11 +27,18 @@ func main() {
 	}
 	defer db.Close()
 
+	err = godotenv.Load()
+    if err != nil {
+        log.Fatalf("Error loading .env file: %v", err)
+    }
+
 	createTable(db)
 
 	transactions := readFile()
 
 	insertTransactions(db, transactions)
+
+	SendNotificationMail(transactions)	
 }
 
 // createTable creates a table in the database if it does not exist.
@@ -98,4 +108,60 @@ func insertTransactions(db *sql.DB, transactions []Transaction) {
 		
 		fmt.Println("Transactions inserted successfully.")
 	}
+}
+
+
+// SendNotificationMail send the resumee via mail using Gmail SMTP
+func SendNotificationMail(transactions []Transaction) {
+	  
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMTP_PORT")
+	senderEmail := os.Getenv("SMTP_USER")
+	password := os.Getenv("SMTP_PASSWORD")
+    recipients := []string{senderEmail}
+  
+	  auth := smtp.PlainAuth("", senderEmail, password, smtpHost)
+  
+	  header := make(map[string]string)
+	  header["From"] = senderEmail
+	  header["To"] = strings.Join(recipients, ",")
+	  header["Subject"] = "StoriCard Challenge"
+	  header["MIME-Version"] = "1.0"
+	  header["Content-Type"] = "text/html; charset=\"UTF-8\""
+	  header["Content-Transfer-Encoding"] = "base64"
+  
+      htmlBody := `
+      <!DOCTYPE html>
+      <html>
+      <head>
+      <title>Resumen de Transacciones</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; background-color: #f2f2f2; color: #000000; padding: 20px; margin: 0;">
+          <div style="background-color: #ffffff; width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+              <div style="background-color: #00d180; color: #ffffff; padding: 10px; text-align: center; border-radius: 8px 8px 0 0; font-size: 24px; font-weight: bold;">Stori</div>
+              <div style="padding: 20px; text-align: center;">
+                  <p>Hola <span style="color: #00d180;">Lucas</span>, te compartimos el resumen de tus stori cards. Ante cualquier incomveniente comunicate con nosotros.</p>
+                  <div style="font-size: 22px; margin: 20px 0; color: #000000;">Tu balance es $20.33</div>
+                  <div style="font-size: 22px; text-align: center; color: #003a40; margin: 20px 0;">Tus últimas transacciones</div>
+                  <!-- El resto de tu HTML con estilos en línea -->
+              </div>
+          </div>
+      </body>
+      </html>`
+      
+  
+message := ""
+for k, v := range header {
+	message += fmt.Sprintf("%s: %s\r\n", k, v)
+}
+message += "\r\n" + htmlBody
+
+  
+	  // Conectar al servidor SMTP y enviar el mensaje
+	  err := smtp.SendMail(smtpHost+":"+smtpPort, auth, senderEmail, recipients, []byte(message))
+	  if err != nil {
+		  panic(err)
+	  }
+  
+	  println("Email sended successfully!")
 }
