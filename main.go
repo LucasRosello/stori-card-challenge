@@ -28,7 +28,7 @@ func main() {
 
 	transactions := readFile()
 
-	fmt.Println(transactions)
+	insertTransactions(db, transactions)
 }
 
 // createTable creates a table in the database if it does not exist.
@@ -78,4 +78,24 @@ func readFile() []Transaction {
 	}
 
 	return transactions
+}
+
+// insertTransactions inserts a slice of Transaction into the database.
+func insertTransactions(db *sql.DB, transactions []Transaction) {
+	for _, trans := range transactions {
+		insertSQL := `INSERT INTO transactions (id, date, amount) VALUES (?, ?, ?)`
+		statement, err := db.Prepare(insertSQL)
+		if err != nil {
+			log.Fatalf("Error preparing statement: %s", err)
+			continue
+		}
+
+		_, err = statement.Exec(trans.ID, trans.Date, trans.Amount)
+		if err != nil {
+			log.Fatalf("Error inserting transaction data: %s", err)
+			continue
+		}
+		
+		fmt.Println("Transactions inserted successfully.")
+	}
 }
