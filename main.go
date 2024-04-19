@@ -8,6 +8,9 @@ import (
 	"strconv"
 	"encoding/csv"
 	"net/smtp"
+    "bytes"
+    "math"
+    "html/template"
 	"github.com/joho/godotenv"
     "strings"
 
@@ -18,6 +21,13 @@ type Transaction struct {
 	ID          int
 	Date        string
 	Amount		float64
+}
+
+type MonthTransactions struct {
+    Month             string
+    Transactions      []Transaction
+    AverageDebit      float64
+    AverageCredit     float64
 }
 
 func main() {
@@ -114,6 +124,55 @@ func insertTransactions(db *sql.DB, transactions []Transaction) {
 // SendNotificationMail send the resumee via mail using Gmail SMTP
 func SendNotificationMail(transactions []Transaction) {
 	  
+    monthTrans := []MonthTransactions{
+        // TODO Add all the months
+        {"Marzo", filterTransactions(transactions, "03"), 0, 0},
+        {"Febrero", filterTransactions(transactions, "02"), 0, 0},
+        {"Enero", filterTransactions(transactions, "01"), 0, 0},
+    }
+
+    for i, _ := range monthTrans {
+        monthTrans[i].AverageDebit, monthTrans[i].AverageCredit = calculateAverages(monthTrans[i].Transactions)
+    }
+
+    tmpl := `{{range .}}
+    <tr style="background-color: #f2f2f2; color: #333;">
+        <td colspan="4" style="text-align: center; padding: 10px; font-weight: bold; background-color: #00d180; color: white;">{{.Month}}</td>
+    </tr>
+    {{range .Transactions}}
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{.Date}}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">Nombre del negocio</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{if lt .Amount 0.00}}<span style="color: #ff0000;">Debit</span>{{else}}<span style="color: #00d180;">Credit</span>{{end}}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${{printf "%.2f" .Amount}}</td>
+    </tr>    
+    {{end}}
+    <tr class="average-row" style="font-weight: bold;">
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">Promedio de transacciones con débito de {{.Month}}:</td>
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">${{printf "%.2f" .AverageDebit}}</td>
+    </tr>
+    <tr class="average-row" style="font-weight: bold;">
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">Promedio de transacciones con crédito de {{.Month}}:</td>
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">${{printf "%.2f" .AverageCredit}}</td>
+    </tr>
+    {{end}}`
+    
+
+t, err := template.New("webpage").Parse(tmpl)
+if err != nil {
+panic(err)
+}
+
+var buf bytes.Buffer
+
+err = t.Execute(&buf, monthTrans)
+if err != nil {
+panic(err)
+}
+
+outputHTML := buf.String()
+
+
 	smtpHost := os.Getenv("SMTP_HOST")
 	smtpPort := os.Getenv("SMTP_PORT")
 	senderEmail := os.Getenv("SMTP_USER")
@@ -143,25 +202,64 @@ func SendNotificationMail(transactions []Transaction) {
                   <p>Hola <span style="color: #00d180;">Lucas</span>, te compartimos el resumen de tus stori cards. Ante cualquier incomveniente comunicate con nosotros.</p>
                   <div style="font-size: 22px; margin: 20px 0; color: #000000;">Tu balance es $20.33</div>
                   <div style="font-size: 22px; text-align: center; color: #003a40; margin: 20px 0;">Tus últimas transacciones</div>
-                  <!-- El resto de tu HTML con estilos en línea -->
+                  <table class="transactions-table">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Negocio</th>
+                        <th>Tipo</th>
+                        <th>Monto</th>
+                    </tr>
+                `+outputHTML+`
+                </table>
               </div>
           </div>
       </body>
       </html>`
       
   
-message := ""
-for k, v := range header {
-	message += fmt.Sprintf("%s: %s\r\n", k, v)
-}
-message += "\r\n" + htmlBody
+    message := ""
+    for k, v := range header {
+        message += fmt.Sprintf("%s: %s\r\n", k, v)
+    }
+    message += "\r\n" + htmlBody
 
   
-	  // Conectar al servidor SMTP y enviar el mensaje
-	  err := smtp.SendMail(smtpHost+":"+smtpPort, auth, senderEmail, recipients, []byte(message))
+	  err = smtp.SendMail(smtpHost+":"+smtpPort, auth, senderEmail, recipients, []byte(message))
 	  if err != nil {
 		  panic(err)
 	  }
   
 	  println("Email sended successfully!")
+}
+
+func filterTransactions(transactions []Transaction, month string) (filtered []Transaction) {
+    for _, t := range transactions {
+        if strings.Contains(t.Date, "-"+month+"-") {
+            filtered = append(filtered, t)
+        }
+    }
+    return
+}
+
+func calculateAverages(transactions []Transaction) (avgDebit, avgCredit float64) {
+    var sumDebit, sumCredit float64
+    var countDebit, countCredit int
+
+    for _, t := range transactions {
+        if t.Amount < 0 { // Debit if the amount is negative
+            sumDebit += math.Abs(t.Amount)
+            countDebit++
+        } else if t.Amount > 0 { // Credit if the amount is positive
+            sumCredit += t.Amount
+            countCredit++
+        }
+    }
+
+    if countDebit > 0 {
+        avgDebit = sumDebit / float64(countDebit)
+    }
+    if countCredit > 0 {
+        avgCredit = sumCredit / float64(countCredit)
+    }
+    return
 }
