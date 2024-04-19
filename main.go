@@ -2,7 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
+	"strconv"
+	"encoding/csv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -22,6 +26,9 @@ func main() {
 
 	createTable(db)
 
+	transactions := readFile()
+
+	fmt.Println(transactions)
 }
 
 // createTable creates a table in the database if it does not exist.
@@ -37,4 +44,38 @@ func createTable(db *sql.DB) {
 	}
 
 	fmt.Println("Database successfully working.")
+}
+
+// readFile reads transactions from a CSV file and returns a slice of Transaction.
+func readFile() []Transaction {
+	file, err := os.Open("/root/transactions.csv")
+	if err != nil {
+		log.Fatalf("Unable to read input file: %s", err)
+	}
+	defer file.Close()
+
+	csvReader := csv.NewReader(file)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		log.Fatalf("Unable to parse file as CSV: %s", err)
+	}
+
+	var transactions []Transaction
+	for i, record := range records {
+		if i == 0 { // Skip the header row
+			continue
+		}
+		id, err := strconv.Atoi(record[0])
+		if err != nil {
+			log.Fatalf("Error parsing ID: %s", err)
+		}
+		date := record[1]
+		amount, err := strconv.ParseFloat(record[2], 64)
+		if err != nil {
+			log.Fatalf("Error parsing transaction amount: %s", err)
+		}
+		transactions = append(transactions, Transaction{ID: id, Date: date, Amount: amount})
+	}
+
+	return transactions
 }
