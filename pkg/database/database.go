@@ -3,7 +3,9 @@ package database
 import (
     "database/sql"
     "log"
+    "fmt"
 
+    "github.com/LucasRosello/stori-card-challenge/pkg/transactions"
     _ "github.com/mattn/go-sqlite3"
 )
 
@@ -32,5 +34,25 @@ func createTable(db *sql.DB) error {
     }
 
     log.Println("Database successfully configured.")
+    return nil
+}
+
+func InsertTransactions(db *sql.DB, transactions []transactions.Transaction) error {
+    insertSQL := `INSERT INTO transactions (id, date, amount) VALUES (?, ?, ?)`
+    stmt, err := db.Prepare(insertSQL)
+    if err != nil {
+        return fmt.Errorf("error preparing statement: %w", err)
+    }
+    defer stmt.Close()
+
+    for _, trans := range transactions {
+        _, err := stmt.Exec(trans.ID, trans.Date, trans.Amount)
+        if err != nil {
+            log.Printf("Error inserting transaction with ID %d: %v", trans.ID, err)
+            continue
+        }
+    }
+
+    log.Println("Transactions inserted successfully.")
     return nil
 }

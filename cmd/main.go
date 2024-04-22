@@ -5,6 +5,7 @@ import (
     "github.com/LucasRosello/stori-card-challenge/pkg/database"
     "github.com/LucasRosello/stori-card-challenge/pkg/transactions"
     "github.com/LucasRosello/stori-card-challenge/pkg/mail"
+    "github.com/LucasRosello/stori-card-challenge/pkg/whatsapp"
     "github.com/joho/godotenv"
 )
 
@@ -26,7 +27,18 @@ func main() {
         log.Fatal("Failed to read file:", err)
     }
 
- 	insertTransactions(db, transactions)
+    err = database.InsertTransactions(db, trans)
+    if err != nil {
+        log.Fatal("Failed to insert transactions on DB", err)
+    }
 
     mail.SendNotificationMail(trans)
+
+
+    // Extra: Send resume to whatsapp
+    client := whatsapp.StartWhatsAppClient()
+    
+    whatsapp.SendWhatsappMessage(client)
+    
+    whatsapp.WaitForInterrupt(client)
 }
