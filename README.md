@@ -13,11 +13,11 @@ For this I will create a worker in golang that will read a CSV file, this worker
 
 ### Desktop
 
-![imagen](https://github.com/LucasRosello/stori-card-challenge/assets/55340118/e2d3fe8b-7131-4fc6-a488-9b61ba07cfbc)
+![imagen](https://github.com/LucasRosello/stori-card-challenge/assets/55340118/940e94bd-817b-40a5-b72c-5f27da977184)
 
 ### Mobile
 
-![WhatsApp Image 2024-04-22 at 12 09 59 AM](https://github.com/LucasRosello/stori-card-challenge/assets/55340118/37c4da5c-481a-4ebe-bff7-af676f0412c7)
+![WhatsApp Image 2024-04-22 at 12 42 49 AM](https://github.com/LucasRosello/stori-card-challenge/assets/55340118/5228f1ae-0a58-42a9-a965-48ee14c97f66)
 
 ## How I imagine this on producction
 
