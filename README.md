@@ -27,6 +27,12 @@ Despite that, I took the time to prepare, as I imagine, a similar solution, for 
 
 ![imagen](https://github.com/LucasRosello/stori-card-challenge/assets/55340118/553f025c-0070-4b28-80b4-e700362f0f26)
 
+## Extra feature: Whatsapp
+
+I added a module to send Message using the public whatsapp business API
+
+![WhatsApp Image 2024-04-22 at 1 55 14 AM](https://github.com/LucasRosello/stori-card-challenge/assets/55340118/3737f387-288f-437a-834b-5fa0a38a27db)
+
 ## Sketches
 
 Some ugly sketches from the process
