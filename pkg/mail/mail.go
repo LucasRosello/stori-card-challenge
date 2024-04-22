@@ -48,6 +48,14 @@ func loadTemplate() *template.Template {
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${{printf "%.2f" .Amount}}</td>
     </tr>    
     {{end}}
+    <tr class="average-row" style="font-weight: bold;">
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">Promedio de transacciones con débito de {{.Month}}:</td>
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">${{printf "%.2f" .AverageDebit}}</td>
+    </tr>
+    <tr class="average-row" style="font-weight: bold;">
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">Promedio de transacciones con crédito de {{.Month}}:</td>
+        <td colspan="2" style="padding: 10px; background-color: #e8e8e8;">${{printf "%.2f" .AverageCredit}}</td>
+    </tr>
     {{end}}`
 
     t, err := template.New("emailTemplate").Parse(tmpl)
@@ -64,6 +72,10 @@ func generateHTMLForMail(trans []transactions.Transaction) string {
         {"Marzo", transactions.FilterTransactions(trans, "03"), 0, 0},
         {"Febrero", transactions.FilterTransactions(trans, "02"), 0, 0},
         {"Enero", transactions.FilterTransactions(trans, "01"), 0, 0},
+    }
+
+    for i,_ := range monthTrans {
+        monthTrans[i].AverageDebit, monthTrans[i].AverageCredit = transactions.CalculateAverages(monthTrans[i].Transactions)
     }
 
     outputHTML, err := executeTemplate(tmpl, monthTrans)
